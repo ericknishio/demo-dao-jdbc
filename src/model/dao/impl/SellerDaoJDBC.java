@@ -43,8 +43,8 @@ public class SellerDaoJDBC implements SellerDao{
 
 	@Override
 	public Seller findById(Integer id) {
-		PreparedStatement st = null;
-		ResultSet rs = null;
+		PreparedStatement st = null; //Obj para consulta SQL, permite inserir parâmetros depois
+		ResultSet rs = null; //Contém os dados armazenados em forma de tabela
 		
 		try {
 			st = conn.prepareStatement(
@@ -94,8 +94,44 @@ public class SellerDaoJDBC implements SellerDao{
 	
 	@Override
 	public List<Seller> findAll() {
-		// TODO Auto-generated method stub
-		return null;
+		PreparedStatement st = null;
+		ResultSet rs = null;
+		
+		try {
+			st = conn.prepareStatement(
+					"SELECT "
+					+ "seller.*, "
+					+ "department.Name as DepName "
+					+ "FROM seller "
+					+ "INNER JOIN department "
+					+ "ON seller.DepartmentId = department.Id "
+					+ "ORDER BY Name"
+					);
+			rs = st.executeQuery();
+			
+			List<Seller> list = new ArrayList<>();
+			Map<Integer, Department> map = new HashMap<>();
+			
+			while(rs.next()) {
+				Department dep = map.get(rs.getInt("DepartmentId"));
+				
+				if(dep == null) {
+					dep = instantiateDepartment(rs);
+					map.put(rs.getInt("DepartmentId"), dep);	
+				}
+				
+				Seller sel = instantiateSeller(rs, dep);
+				list.add(sel);
+			}
+			return list;
+		}
+		catch(SQLException e) {
+			throw new DbException(e.getMessage());
+		}
+		finally {
+			DB.closeStatement(st);
+			DB.closeResultSet(rs);
+		}
 	}
 
 	@Override
@@ -118,14 +154,14 @@ public class SellerDaoJDBC implements SellerDao{
 			rs = st.executeQuery();
 			
 			List<Seller> list = new ArrayList<>();
-			Map<Integer, Department> map = new HashMap<>();
+			Map<Integer, Department> map = new HashMap<>(); //Chave Id, Departament
 			
-			while (rs.next()) { //Se retornar um registro
-				Department dep = map.get(rs.getInt("DepartmentId"));
+			while (rs.next()) { //Percorrer o resultset enquanto tiver um próximo
+				Department dep = map.get(rs.getInt("DepartmentId")); //Procura dentro de map se existe o departamento com Id informado
 				
-				if (dep == null) {
-					dep = instantiateDepartment(rs);
-					map.put(rs.getInt("DepartmentId"), dep);
+				if (dep == null) { //Se não existir
+					dep = instantiateDepartment(rs); //Instanciar o departamento
+					map.put(rs.getInt("DepartmentId"), dep); //Salva o departamento dentro do map
 				}
 				
 				Seller sel = instantiateSeller(rs, dep);
